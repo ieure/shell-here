@@ -21,7 +21,8 @@
 
 ;;; Commentary:
 
-;;
+;; (require 'shell-here)
+;; (define-key (current-global-map) "\C-c!" 'shell-here)
 
 ;;; Code:
 
