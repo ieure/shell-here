@@ -32,3 +32,10 @@
 | =C-- C-1 C-c != | Open a shell one level up from root           |
 | =C-- C-2 C-c != | Open a shell two levels up from root (etc)    |
 | =C-- C-u C-c != | Open a new shell in the project root          |
+
+* License
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
