@@ -71,7 +71,9 @@ Project root is determined with `ffip-project-root', if available."
         (unless (fboundp 'ffip-project-root)
           (error "Find-file-in-project is required, but was not found."))))
 
-    (let* ((root (shell-here-normalize (ffip-project-root)))
+    (let* ((root (shell-here-normalize (if (fboundp 'ffip-project-root)
+                                           (ffip-project-root)
+                                         default-directory)))
            (start (or (and root-relative root)
                       (shell-here-normalize default-directory)))
            (target (shell-here-walk-up start levels))
