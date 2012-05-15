@@ -42,6 +42,7 @@
 (defun shell-here-normalize (path)
   (when path (shell-here-stripslash (expand-file-name path))))
 
+;;;###autoload
 (defun shell-here (&optional arg)
   "Open a shell relative to `default-directory'.
 
