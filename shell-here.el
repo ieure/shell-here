@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009-2012  Ian Eure
 
 ;; Author: Ian Eure <ian.eure@gmail.com>
-;; Version: 1.1
+;; Version: 1.2
 ;; Keywords: unix, tools, processes
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,32 @@
 
 ;;; Commentary:
 
-;; (require 'shell-here)
-;; (define-key (current-global-map) "\C-c!" 'shell-here)
+;; Open a shell buffer in (or relative to) default-directory,
+;; e.g. whatever directory the current buffer is in. If you have
+;; find-file-in-project installed, you can also move around relative
+;; to the root of the current project.
+
+;; I use Emacs shell buffers for everything, and shell-here is great
+;; for getting where you need to quickly. The =find-file-in-project=
+;; integration makes it very easy to manage multiple shells and
+;; maintain your path / history / scrollback when switching between
+;; projects.
+;;
+;; Recommended binding: =C-c !=
+;;
+;;   (require 'shell-here)
+;;   (define-key (current-global-map) "\C-c!" 'shell-here)
+;;
+;; Usage:
+;;
+;; | =C-c !=         | Open a shell in the current directory         |
+;; | =C-1 C-c !=     | Open a shell one level up from current        |
+;; | =C-2 C-c !=     | Open a shell two levels up from current (etc) |
+;; | =C-u C-c !=     | Open a new shell in the current directory     |
+;; | =C-- C-c !=     | Open a shell in the current project root      |
+;; | =C-- C-1 C-c != | Open a shell one level up from root           |
+;; | =C-- C-2 C-c != | Open a shell two levels up from root (etc)    |
+;; | =C-- C-u C-c != | Open a new shell in the project root          |
 
 ;;; Code:
 
@@ -30,16 +54,19 @@
   (require 'cl))
 
 (defun shell-here-walk-up (base steps)
+  "Return the location STEPS levels up from directory BASE"
   (if (= steps 0) base
     (shell-here-walk-up (shell-here-stripslash
                          (file-name-directory base)) (- steps 1))))
 
 (defun shell-here-stripslash (path)
+  "Return PATH with the trailing slash, if any, removed."
   (if (and (> (length path) 1) (string= (substring path -1) "/"))
       (substring path 0 -1)
     path))
 
 (defun shell-here-normalize (path)
+  "Return a canonicalized PATH, with trailing slash, if any, removed."
   (when path (shell-here-stripslash (expand-file-name path))))
 
 ;;;###autoload
@@ -53,7 +80,9 @@ With a plain negative argument, open a shell in the project root.
 With a negative numeric argument, open a shell ARG levels up from the
 project root.
 
-Shell buffer names include the name of the current project's directory, if available; otherwise *shell*. If a shell buffer already exists, it will be reused.
+Shell buffer names include the name of the current project's
+directory, if available; otherwise *shell*. If a shell buffer already
+exists, it will be reused.
 
 With the universal argument, open a new shell in `default-directory'.
 With a negative universal argument, open a new shell in the project
@@ -66,6 +95,7 @@ Project root is determined with `ffip-project-root', if available."
          (levels (if (and arg (not (eq arg '-)) (not new))
                     (abs (prefix-numeric-value arg)) 0)))
 
+    ;; Check for ffip if needed
     (when (and root-relative (not (fboundp 'ffip-project-root)))
       (unwind-protect
           (require 'find-file-in-project)
@@ -93,8 +123,17 @@ Project root is determined with `ffip-project-root', if available."
                 (and proc (process-live-p proc)))
         (shell buf))
       (goto-char (point-max))
+
+      ;; We need to `cd'
       (when (not (string= (shell-here-stripslash
                            (expand-file-name default-directory)) target))
+
+        ;; Save any input on the command line; `comint-kill-input'
+        ;; calls `kill-region', which we have flet with a function
+        ;; that returns the region before deleting it.
+        ;; The (insert (prog1 …)) inserts it (or an empty string, if
+        ;; we know we have a new buffer) back into the shell buffer
+        ;; after having changed directories.
         (flet ((kill-region (start end)
                  (prog1
                      (buffer-substring start end) (delete-region start end))))
