@@ -2,14 +2,13 @@
 
   Open a shell buffer in (or relative to) =default-directory=,
   e.g. whatever directory the current buffer is in. If you have
-  =find-file-in-project= installed, you can also move around relative
-  to the root of the current project.
+  =projectile= or =find-file-in-project= installed, you can also move
+  around relative to the root of the current project.
 
   I use Emacs shell buffers for everything, and shell-here is great
-  for getting where you need to quickly. The =find-file-in-project=
-  integration makes it very easy to manage multiple shells and
-  maintain your path / history / scrollback when switching between
-  projects.
+  for getting where you need to quickly. Projectile / FFIP integration
+  makes it very easy to manage multiple shells and maintain your path
+  / history / scrollback when switching between projects.
 
 * Installation
 
@@ -32,6 +31,20 @@
 | =C-- C-1 C-c != | Open a shell one level up from root           |
 | =C-- C-2 C-c != | Open a shell two levels up from root (etc)    |
 | =C-- C-u C-c != | Open a new shell in the project root          |
+
+* Configuration
+
+There are two things you can configure, both dealing with how
+=shell-here= determines the root of the project you’re in.
+
+ 1. =shell-here-project-root-functions=. This variable contains a list
+    of functions to determine the root of the project. The first one
+    that’s bound will be called with no arguments. The first truthy
+    value returned will be the root.
+ 2. =shell-here-project-root-files=. If
+    =shell-here-project-root-functions= is nil or doesn’t produce a
+    truthy value, =locate-dominating-file= will be called for each
+    entry in this variable, until one returns a truthy value.
 
 * License
 

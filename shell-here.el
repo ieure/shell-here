@@ -1,9 +1,9 @@
 ;;; shell-here.el --- Open a shell relative to the working directory
 
-;; Copyright (C) 2009-2012  Ian Eure
+;; Copyright (C) 2009-2012, 2015  Ian Eure
 
 ;; Author: Ian Eure <ian.eure@gmail.com>
-;; Version: 1.2
+;; Version: 1.3
 ;; Keywords: unix, tools, processes
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -53,6 +53,14 @@
 (eval-when-compile
   (require 'cl))
 
+(defvar shell-here-project-root-functions
+  '(projectile-project-root ffip-project-root)
+  "Functions to attempt evaluating to determine the project root.")
+
+(defvar shell-here-project-root-files
+  '(".git")
+  "Dominating files to look for to determine the project root.")
+
 (defun shell-here-walk-up (base steps)
   "Return the location STEPS levels up from directory BASE"
   (if (= steps 0) base
@@ -68,6 +76,23 @@
 (defun shell-here-normalize (path)
   "Return a canonicalized PATH, with trailing slash, if any, removed."
   (when path (shell-here-stripslash (expand-file-name path))))
+
+(defun shell-here-project-root ()
+  "Return the project root.
+
+   Tries calling `shell-here-project-root-functions', returning the
+   result of evaluating the first one which is bound. If none are
+   bound, looks for a parent directory containing a file in
+   `shell-here-project-root-files'."
+  (or (cl-loop with found = nil
+               for func in shell-here-project-root-functions
+               if (setq found (and (fboundp func) (apply func nil)))
+               return found)
+      (cl-loop with found = nil
+               for file in shell-here-project-root-files
+               if (setq found (locate-dominating-file default-directory file))
+               return found)
+      default-directory))
 
 ;;;###autoload
 (defun shell-here (&optional arg)
@@ -86,25 +111,14 @@ exists, it will be reused.
 
 With the universal argument, open a new shell in `default-directory'.
 With a negative universal argument, open a new shell in the project
-root.
-
-Project root is determined with `ffip-project-root', if available."
+root."
   (interactive "P")
   (let* ((root-relative (< (prefix-numeric-value arg) 0))
          (new (consp arg))
          (levels (if (and arg (not (eq arg '-)) (not new))
                     (abs (prefix-numeric-value arg)) 0)))
 
-    ;; Check for ffip if needed
-    (when (and root-relative (not (fboundp 'ffip-project-root)))
-      (unwind-protect
-          (require 'find-file-in-project)
-        (unless (fboundp 'ffip-project-root)
-          (error "Find-file-in-project is required, but was not found."))))
-
-    (let* ((root (shell-here-normalize (if (fboundp 'ffip-project-root)
-                                           (ffip-project-root)
-                                         default-directory)))
+    (let* ((root (shell-here-normalize (shell-here-project-root)))
            (start (or (and root-relative root)
                       (shell-here-normalize default-directory)))
            (target (shell-here-walk-up start levels))
