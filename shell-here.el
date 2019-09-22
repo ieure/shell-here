@@ -141,7 +141,9 @@ root."
       ;; We need to `cd'
       (when (not (string= (shell-here-stripslash
                            (expand-file-name default-directory)) target))
-        (setq target (substring target (string-match "[^\:]+\/[^\:\*\\\<\>\|]+" target)))
+        (when (tramp-tramp-file-p target)
+          (with-parsed-tramp-file-name target path
+            (setq target path-localname)))
 
         ;; Save any input on the command line; `comint-kill-input'
         ;; calls `kill-region', which we have flet with a function
